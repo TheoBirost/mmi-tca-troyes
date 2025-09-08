@@ -26,6 +26,7 @@ class BuggyController extends AbstractController
 
         return $this->render('welcome.html.twig', [
             'data' => $data['key1'],
+            'message' => 'Bienvenue sur notre application Symfony !',
         ]);
     }
 }
