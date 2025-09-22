@@ -1,4 +1,4 @@
-name: s5_Theo-bi-symfony.yml
+name: s5_Theo-bi-symfony
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "ressources/s5/Theo-bi/projets/ci-cd-symfony/**"
+  workflow_dispatch: # permet de lancer à la main
 
 defaults:
   run:
@@ -41,7 +42,7 @@ jobs:
 
       - name: Audit de sécurité
         run: composer audit --format=json --no-interaction
-        continue-on-error: true # Permettre au CI de continuer même si des vulnérabilités sont détectées
+        continue-on-error: true
 
   build-artifact:
     needs: ci-symfony
@@ -53,54 +54,34 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image with PHP 8.2
+      - name: Create Dockerfile for build
         run: |
-          docker build -t symfony-build -f - . <<EOF
+          cat > Dockerfile.ci <<'EOF'
           FROM ubuntu:22.04
-          
-          # Mettre à jour les dépôts
           RUN apt update && apt upgrade -y
-          
-          # Ajouter le dépôt de PHP 8.2
-          RUN apt install -y software-properties-common
-          RUN add-apt-repository -y ppa:ondrej/php
-          RUN apt update
-          
-          # Installer PHP 8.2 et les extensions nécessaires
-          RUN apt install -y php8.2 php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-bcmath php8.2-intl unzip curl
-          
-          # Installer Composer
-          RUN curl -sS https://getcomposer.org/installer | php
-          RUN mv composer.phar /usr/local/bin/composer
-          
-          # Vérifier les versions installées
-          RUN php -v
-          RUN composer -V
-          
+          RUN apt install -y software-properties-common curl unzip
+          RUN add-apt-repository -y ppa:ondrej/php && apt update
+          RUN apt install -y php8.2 php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-bcmath php8.2-intl
+          RUN curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
           WORKDIR /app
           EOF
+
+      - name: Build Docker image with PHP 8.2
+        run: docker build -t symfony-build -f Dockerfile.ci .
 
       - name: Configure environment variables and build artifact
         run: |
           docker run --rm -v $(pwd)/ressources/s5/Theo-bi/projets/ci-cd-symfony:/app symfony-build bash -c "
             cd /app
-          
-            # Configurer les variables d'environnement
             export APP_ENV=prod
-            export DATABASE_URL=\"postgresql://app:!my-password!@127.0.0.1:5432/app?serverVersion=16&charset=utf8\"
-          
-            # Générer le fichier .env.local.php optimisé pour la production
+            export DATABASE_URL='${DATABASE_URL}'
             composer dump-env prod
-          
-            # Installer les dépendances de production
             composer install --no-dev --optimize-autoloader --ignore-platform-reqs
-          
-            # Optimiser les assets
             php bin/console asset-map:compile
           "
         env:
           APP_ENV: prod
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://app:!my-password!@127.0.0.1:5432/app?serverVersion=16&charset=utf8' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Create artifact archive
         run: |
@@ -121,7 +102,7 @@ jobs:
 
       - name: Test artifact
         run: |
-          docker run --rm -v $(pwd)/ressources/s5/Theo-bi/projets/ci-cd-symfony:/app -p 8000:8000 symfony-build bash -c "
+          docker run --rm -v $(pwd)/ressources/s5/Theo-bi/projets/ci-cd-symfony:/app symfony-build bash -c "
             cd /app
             mkdir -p /symfony-artifact-r1
             tar -xvf symfony-artifact-r1.tar.gz -C /symfony-artifact-r1/
