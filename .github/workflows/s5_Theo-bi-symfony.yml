@@ -25,7 +25,7 @@ jobs:
           php-version: "8.2"
           coverage: pcov
 
-      - name: Install dependencies
+      - name: Install Composer dependencies
         run: composer install --no-progress --prefer-dist --no-scripts
 
       - name: Run PHP-CS-Fixer
@@ -40,7 +40,7 @@ jobs:
       - name: Run PHPUnit
         run: ./vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
 
-      - name: Audit de sécurité
+      - name: Security audit
         run: composer audit --format=json --no-interaction
         continue-on-error: true
 
@@ -58,15 +58,16 @@ jobs:
         run: |
           cat > Dockerfile.ci <<'EOF'
           FROM ubuntu:22.04
-          RUN apt update \
-           && apt install -y lsb-release apt-transport-https ca-certificates wget \
-           && wget -qO /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg \
-           && echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list \
-           && apt update \
-           && apt install -y \
-              php8.2 php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-bcmath php8.2-intl \
-              unzip curl git
-          RUN curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
+
+          # Installer les dépendances de PHP et outils de build
+          RUN apt update && \
+              apt install -y lsb-release apt-transport-https ca-certificates wget gnupg curl unzip git && \
+              wget -qO /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg && \
+              echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list && \
+              apt update && \
+              apt install -y php8.2 php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-bcmath php8.2-intl && \
+              curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
+
           WORKDIR /app
           EOF
 
