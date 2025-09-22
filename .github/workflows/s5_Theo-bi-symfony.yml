@@ -57,14 +57,13 @@ jobs:
       - name: Create Dockerfile for build
         run: |
           cat > Dockerfile.ci <<'EOF'
-          FROM ubuntu:22.04
-          RUN apt update && apt install -y \
-              php8.2 php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-bcmath php8.2-intl \
-              unzip curl git
+          FROM php:8.2-cli
+          RUN apt-get update && apt-get install -y \
+              git unzip libzip-dev libicu-dev libxml2-dev \
+              && docker-php-ext-install intl bcmath opcache
           RUN curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
           WORKDIR /app
           EOF
-      
 
       - name: Build Docker image with PHP 8.2
         run: docker build -t symfony-build -f Dockerfile.ci .
