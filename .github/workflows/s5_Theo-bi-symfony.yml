@@ -58,13 +58,13 @@ jobs:
         run: |
           cat > Dockerfile.ci <<'EOF'
           FROM ubuntu:22.04
-          RUN apt update && apt upgrade -y
-          RUN apt install -y software-properties-common curl unzip
-          RUN add-apt-repository -y ppa:ondrej/php && apt update
-          RUN apt install -y php8.2 php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-bcmath php8.2-intl
+          RUN apt update && apt install -y \
+              php8.2 php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip php8.2-bcmath php8.2-intl \
+              unzip curl git
           RUN curl -sS https://getcomposer.org/installer | php && mv composer.phar /usr/local/bin/composer
           WORKDIR /app
           EOF
+      
 
       - name: Build Docker image with PHP 8.2
         run: docker build -t symfony-build -f Dockerfile.ci .
