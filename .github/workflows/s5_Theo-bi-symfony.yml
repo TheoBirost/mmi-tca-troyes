@@ -19,16 +19,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install PHP 8.2 and dependencies manually
-        run: |
-          apt update
-          apt install -y software-properties-common
-          add-apt-repository ppa:ondrej/php
-          apt update
-          apt install -y \
-            php8.2 php8.2-cli php8.2-mbstring php8.2-xml php8.2-curl php8.2-zip \
-            php8.2-bcmath php8.2-intl unzip curl git
-
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
